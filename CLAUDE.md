@@ -4,6 +4,8 @@ For students of Langchain and Agentic Frameworks. Repo should highlight some bas
 # Tasks
 1. Each conversation should keep a running count of tokens being used.
 2. For each of Langchain and Langgraph, create a basic agent that can write answers to file in `./output/` folder, when requested by the user.
+3. Create Langchain Connectors for Ollama and LLAMA.CPP servers. I specify server, as there are other methods of connections. Ignore them, use localhost running servers. Use Web Resources to accurately test. 
+4. For testing, do not download new modelsm for either LLAMA.CPP and Ollama. When asking for test, pause and ask the human to start dedicated models. Ask model names if required.
 
 
 # Context

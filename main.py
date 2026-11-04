@@ -13,6 +13,7 @@ import sys
 from src.chat_agent.langchain_agent import build_langchain_agent
 from src.chat_agent.langgraph_agent import build_langgraph_agent
 from src.conversation import Conversation
+from src.models.llm_models import LLM_PROVIDER
 from src.utils.observability import tracing_status
 
 AGENTS = {
@@ -29,7 +30,7 @@ def main():
 
     conversation = Conversation(AGENTS[choice](), name=choice)
 
-    print(f"The {choice} agent is ready. {tracing_status()}")
+    print(f"The {choice} agent is ready, using {LLM_PROVIDER}. {tracing_status()}")
     print("Ask a question, or try: 'Explain LangGraph and save it to notes.md'")
     print("Type 'exit' to quit.\n")
 
@@ -48,9 +49,9 @@ def main():
         try:
             answer = conversation.ask(question)
         except Exception as error:
-            # Usually a missing AWS credential or a model you cannot access.
-            print(f"\nThe call to Bedrock failed: {error}")
-            print("Check the AWS settings in your .env file, then try again.\n")
+            # Usually the model server is not running, or the model name is wrong.
+            print(f"\nThe call to the {LLM_PROVIDER} model failed: {error}")
+            print("Is the server running, and is the model name in .env right?\n")
             continue
 
         print(f"\n{choice} > {answer}\n")

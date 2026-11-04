@@ -10,13 +10,13 @@ The demonstration shows how the an Agent is created based on the python library 
 2. langchain
 3. langgraph
 4. langsmith
-5. AWS Bedrock
-6. Other LLM API based inferences.
+5. Local model servers: Ollama and llama.cpp (`llama-server`)
+6. AWS Bedrock (optional)
 
 # Quickstart
 
 ```bash
-cp .env.example .env     # then fill in your AWS Bedrock credentials
+cp .env.example .env     # then pick LLM_PROVIDER and a model name
 uv sync                  # install dependencies
 
 uv run main.py           # chat with the LangChain agent
@@ -42,7 +42,9 @@ After every reply the running token count for the conversation is printed:
 
 | File | What it shows |
 | --- | --- |
-| `src/models/llm_models.py` | One shared chat model, running on AWS Bedrock |
+| `src/models/llm_models.py` | Picks the one shared chat model from `LLM_PROVIDER` |
+| `src/models/ollama_model.py` | Connector for a local Ollama server (`ChatOllama`) |
+| `src/models/llamacpp_model.py` | Connector for a local `llama-server` (`ChatOpenAI` with a local `base_url`) |
 | `src/tools/file_tools.py` | The `write_answer` tool that saves files to `./output/` |
 | `src/chat_agent/langchain_agent.py` | A LangChain agent built with `create_agent` - the loop comes for free |
 | `src/chat_agent/langgraph_agent.py` | The same agent built by hand as a LangGraph `StateGraph`, so you can see the loop |
@@ -65,27 +67,37 @@ START -> call_model -> did the model ask for a tool?
 
 Everything is read from `.env` (see `.env.example`):
 
-| Variable | Required | Purpose |
+| Variable | Default | Purpose |
 | --- | --- | --- |
-| `AWS_BEARER_TOKEN_BEDROCK` | yes* | Bedrock API key |
-| `AWS_REGION` | no | Bedrock region, defaults to `us-east-1` |
-| `BEDROCK_MODEL_ID` | no | Defaults to `anthropic.claude-haiku-5-5` |
-| `LANGSMITH_TRACING` | no | Set to `true` to trace every run to LangSmith |
-| `LANGSMITH_API_KEY` | no | Needed when tracing is on |
-| `LANGSMITH_PROJECT` | no | Which LangSmith project to send traces to |
+| `LLM_PROVIDER` | `ollama` | `ollama`, `llamacpp` or `bedrock` |
+| `OLLAMA_MODEL` | `llama3.1` | A model you already have (`ollama list`) |
+| `OLLAMA_BASE_URL` | `http://localhost:11434` | Where the Ollama server listens |
+| `LLAMACPP_BASE_URL` | `http://localhost:9931/v1` | Where `llama-server` listens (its default port is 9931) |
+| `LLAMACPP_MODEL` | `local-model` | Label sent to `llama-server`, which serves the model it was started with |
+| `BEDROCK_MODEL_ID` | `anthropic.claude-haiku-5-5` | Only with `LLM_PROVIDER=bedrock`, plus AWS credentials |
+| `LANGSMITH_TRACING` | off | Set to `true` to trace every run to LangSmith |
+| `LANGSMITH_API_KEY` | - | Needed when tracing is on |
+| `LANGSMITH_PROJECT` | - | Which LangSmith project to send traces to |
 
-\* Standard AWS credentials (`AWS_ACCESS_KEY_ID` / `AWS_SECRET_ACCESS_KEY`) work
-instead of the bearer token.
+# Running a local model
 
-Your AWS account also needs **model access** enabled for the model you pick, in
-the Bedrock console under *Model access*. Without it every call fails with
-`Error 002: Access to Bedrock models is not allowed for this account`. To see
-which model ids your account and region offer:
+The demo does not start servers or download models for you. Start one yourself:
 
 ```bash
-uv run python -c "import boto3;print([m['modelId'] for m in \
-  boto3.client('bedrock').list_foundation_models()['modelSummaries']])"
+# Ollama
+ollama serve                 # skip if it already runs as a service
+ollama list                  # pick a model that supports tool calling
+LLM_PROVIDER=ollama OLLAMA_MODEL=<name> uv run main.py
+
+# llama.cpp
+llama-server -m path/to/model.gguf --port 9931
+LLM_PROVIDER=llamacpp uv run main.py
 ```
+
+Ollama has its own LangChain package, `langchain-ollama`. `llama-server`
+speaks the OpenAI API, so the demo reuses `ChatOpenAI` from `langchain-openai`
+and only changes `base_url`. To save files the agent needs a model that
+supports tool calling. Small models sometimes answer without calling the tool.
 
 # Tracing with LangSmith
 
